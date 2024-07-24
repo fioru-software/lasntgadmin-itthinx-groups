@@ -38,10 +38,10 @@ define( 'GROUPS_SHOW_EXTENSIONS_BOX_INTERVAL', 1209600 );
  */
 function groups_admin_options() {
 
-	global $wpdb, $wp_roles;
+	global $wp_roles, $groups_version;
 
-	if ( !current_user_can( GROUPS_ADMINISTER_OPTIONS ) ) {
-		wp_die( __( 'Access denied.', 'groups' ) );
+	if ( !Groups_User::current_user_can( GROUPS_ADMINISTER_OPTIONS ) ) {
+		wp_die( esc_html__( 'Access denied.', 'groups' ) );
 	}
 
 	$is_sitewide_plugin = false;
@@ -122,7 +122,7 @@ function groups_admin_options() {
 
 	echo
 		'<h1>' .
-		__( 'Groups Options', 'groups' ) .
+		esc_html__( 'Groups Options', 'groups' ) .
 		'</h1>';
 
 	echo Groups_Admin::render_messages();
@@ -135,7 +135,7 @@ function groups_admin_options() {
 	$caps_table .= '<thead>';
 	$caps_table .= '<tr>';
 	$caps_table .= '<td class="role">';
-	$caps_table .= __( 'Role', 'groups' );
+	$caps_table .= esc_html__( 'Role', 'groups' );
 	$caps_table .= '</td>';
 	foreach ( $caps as $cap ) {
 		$caps_table .= '<td class="cap">';
@@ -205,7 +205,7 @@ function groups_admin_options() {
 		'<div>' .
 
 		'<p>' .
-		'<input class="button button-primary" type="submit" name="submit" value="' . __( 'Save', 'groups' ) . '"/>' .
+		'<input class="button button-primary" type="submit" name="submit" value="' . esc_attr__( 'Save', 'groups' ) . '"/>' .
 		$extensions_box .
 		'</p>';
 
@@ -215,26 +215,26 @@ function groups_admin_options() {
 			__( 'Administrator Access Override', 'groups' ) .
 			'</h2>' .
 			'<p>' .
-			 __( 'Administrators override all access permissions derived from Groups capabilities.', 'groups' ) .
-			 '</p>' .
-			 '<p>' .
-			 __( 'To disable, do not define the constant <code>GROUPS_ADMINISTRATOR_OVERRIDE</code> or set it to <code>false</code>.', 'groups' ) .
+			esc_html__( 'Administrators override all access permissions derived from Groups capabilities.', 'groups' ) .
 			'</p>' .
 			'<p>' .
-			__( 'Enabling this on production sites is <strong>not</strong> recommended.', 'groups' ) .
+			wp_kses_post( __( 'To disable, do not define the constant <code>GROUPS_ADMINISTRATOR_OVERRIDE</code> or set it to <code>false</code>.', 'groups' ) ) .
+			'</p>' .
+			'<p>' .
+			wp_kses_post( __( 'Enabling this on production sites is <strong>not</strong> recommended.', 'groups' ) ) .
 			'</p>';
 	}
 
 	echo '<h2>';
-	echo __( 'Access restricions', 'groups' );
+	echo esc_html__( 'Access restricions', 'groups' );
 	echo '</h2>';
 
 	echo '<h3>';
-	echo __( 'Post types', 'groups' );
+	echo esc_html__( 'Post types', 'groups' );
 	echo '</h3>';
 
 	echo '<p class="description">';
-	echo __( 'Show access restrictions for these post types.', 'groups' ); // @todo change wording to '...handles access...' ?
+	echo esc_html__( 'Show access restrictions for these post types.', 'groups' ); // @todo change wording to '...handles access...' ?
 	echo '</p>';
 
 	$post_type_objects = get_post_types( array(), 'objects' );
@@ -274,7 +274,7 @@ function groups_admin_options() {
 	echo '</p>';
 
 	echo
-		'<h2>' . __( 'User profiles', 'groups' ) . '</h2>' .
+		'<h2>' . esc_html__( 'User profiles', 'groups' ) . '</h2>' .
 		'<p>' .
 		'<label>' .
 		'<input name="' . GROUPS_SHOW_IN_USER_PROFILE . '" type="checkbox" ' . ( $show_in_user_profile ? 'checked="checked"' : '' ) . '/>' .
@@ -283,7 +283,7 @@ function groups_admin_options() {
 		'</p>';
 
 	echo
-		'<h2>' . __( 'Tree view', 'groups' ) . '</h2>' .
+		'<h2>' . esc_html__( 'Tree view', 'groups' ) . '</h2>' .
 		'<p>' .
 		'<label>' .
 		'<input name="' . GROUPS_SHOW_TREE_VIEW . '" type="checkbox" ' . ( $show_tree_view ? 'checked="checked"' : '' ) . '/>' .
@@ -292,8 +292,8 @@ function groups_admin_options() {
 		'</p>';
 
 	echo
-		'<h2>' . __( 'Permissions', 'groups' ) . '</h2>' .
-		'<p>' . __( 'These permissions apply to Groups management. They do not apply to access permissions derived from Groups capabilities.', 'groups' ) . '</p>' .
+		'<h2>' . esc_html__( 'Permissions', 'groups' ) . '</h2>' .
+		'<p>' . esc_html__( 'These permissions apply to Groups management. They do not apply to access permissions derived from Groups capabilities.', 'groups' ) . '</p>' .
 		$caps_table .
 		'<p class="description">' .
 		__( 'A minimum set of permissions will be preserved.', 'groups' ) .
@@ -302,7 +302,7 @@ function groups_admin_options() {
 		'</p>';
 	if ( !$is_sitewide_plugin ) {
 		echo
-			'<h2>' . __( 'Deactivation and data persistence', 'groups' ) . '</h2>' .
+			'<h2>' . esc_html__( 'Deactivation and data persistence', 'groups' ) . '</h2>' .
 			'<p>' .
 			'<label>' .
 			'<input name="delete-data" type="checkbox" ' . ( $delete_data ? 'checked="checked"' : '' ) . '/>' .
@@ -318,7 +318,7 @@ function groups_admin_options() {
 	if (
 		defined( 'GROUPS_SHOW_LEGACY_SETTINGS' ) && GROUPS_SHOW_LEGACY_SETTINGS === true || $groups_legacy_enable
 	) {
-		echo '<h2>' . __( 'Legacy Settings', 'groups' ) . '</h2>';
+		echo '<h2>' . esc_html__( 'Legacy Settings', 'groups' ) . '</h2>';
 		echo '<p>' .
 			'<label>' .
 			'<input name="' . GROUPS_LEGACY_ENABLE . '" type="checkbox" ' . ( $groups_legacy_enable ? 'checked="checked"' : '' ) . '/>' .
@@ -329,12 +329,48 @@ function groups_admin_options() {
 			require_once GROUPS_LEGACY_LIB . '/admin/groups-admin-options-legacy.php';
 			do_action( 'groups_admin_options_legacy', $groups_legacy_enable !== $previous_legacy_enable );
 		}
+
+		$legacy_enabled = Groups_Options::get_option( GROUPS_LEGACY_ENABLE );
+		echo '<h3>';
+		printf( esc_html__( 'Switching to Groups %s', 'groups' ), esc_html( $groups_version ) );
+		echo '</h3>';
+		echo '<p>';
+		printf( esc_html__( 'Groups %s features a simpler model for access restrictions based on groups instead of capabilities used in Groups 1.x.', 'groups' ), esc_html( $groups_version ) );
+		echo ' ';
+		_e( 'To put it simple, previously you would have used capabilities to restrict access to posts and now you simply use groups.', 'groups' );
+		echo ' ';
+		_e( 'To make it easier to transition to the new model for those who migrate from a previous version, we have included legacy access control based on capabilities.', 'groups' );
+		echo '</p>';
+		echo '<div class="indent">';
+		echo '<p>';
+		_e( 'The following is only of interest if you have upgraded from Groups 1.x:', 'groups' );
+		echo '<br/>';
+		if ( $legacy_enabled ) {
+			_e( 'You are running the system with legacy access control based on capabilities enabled.', 'groups' );
+			echo ' ';
+			_e( 'This means that if you had access restrictions in place that were based on capabilities, your entries will still be protected.', 'groups' );
+		} else {
+			_e( 'You are running the system with legacy access control based on capabilities disabled.', 'groups' );
+			echo ' ';
+			_e( 'This could be important!', 'groups' );
+			echo ' ';
+			_e( 'If you had any access restrictions in place based on capabilities, the entries will now be unprotected, unless you enable legacy access restrictions or place appropriate access restrictions based on groups on the desired entries.', 'groups' );
+		}
+		echo '</p>';
+		echo '<p>';
+		_e( 'If you would like to switch to access restrictions based on groups (recommended) instead of capabilities, you can easily do so by setting the appropriate groups on your protected posts, pages and other entries to restrict access.', 'groups' );
+		echo ' ';
+		_e( 'Once you have adjusted your access restrictions based on groups, you can disable legacy access control.', 'groups' );
+		echo ' ';
+		_e( 'Please refer to the <a target="_blank" href="https://docs.itthinx.com/document/groups/">Documentation</a> for details on how to switch to and use the new access restrictions.', 'groups' );
+		echo '</p>';
+		echo '</div>'; // .indent
 	}
 
 	echo
 		'<p>' .
 		wp_nonce_field( 'admin', GROUPS_ADMIN_OPTIONS_NONCE, true, false ) .
-		'<input class="button button-primary" type="submit" name="submit" value="' . __( 'Save', 'groups' ) . '"/>' .
+		'<input class="button button-primary" type="submit" name="submit" value="' . esc_attr__( 'Save', 'groups' ) . '"/>' .
 		'</p>' .
 		'</div>' .
 		'</form>';
@@ -347,8 +383,8 @@ function groups_admin_options() {
  */
 function groups_network_admin_options() {
 
-	if ( !current_user_can( GROUPS_ADMINISTER_OPTIONS ) ) {
-		wp_die( __( 'Access denied.', 'groups' ) );
+	if ( !Groups_User::current_user_can( GROUPS_ADMINISTER_OPTIONS ) ) {
+		wp_die( esc_html__( 'Access denied.', 'groups' ) );
 	}
 
 	echo
@@ -376,7 +412,7 @@ function groups_network_admin_options() {
 	echo
 		'<form action="" name="options" method="post">' .
 		'<div>' .
-		'<h2>' . __( 'Network deactivation and data persistence', 'groups' ) . '</h2>' .
+		'<h2>' . esc_html__( 'Network deactivation and data persistence', 'groups' ) . '</h2>' .
 		'<p>' .
 		'<label>' .
 		'<input name="delete-data" type="checkbox" ' . ( $delete_data ? 'checked="checked"' : '' ) . '/>' .
@@ -389,7 +425,7 @@ function groups_network_admin_options() {
 		'</p>' .
 		'<p>' .
 		wp_nonce_field( 'admin', GROUPS_ADMIN_OPTIONS_NONCE, true, false ) .
-		'<input class="button button-primary" type="submit" name="submit" value="' . __( 'Save', 'groups' ) . '"/>' .
+		'<input class="button button-primary" type="submit" name="submit" value="' . esc_attr__( 'Save', 'groups' ) . '"/>' .
 		'</p>' .
 		'</div>' .
 		'</form>';
@@ -397,8 +433,10 @@ function groups_network_admin_options() {
 
 /**
  * Compare two post types, considering those that have $public and/or $show_ui true as coming first.
+ *
  * @param object $o1
  * @param object $o2
+ *
  * @return int
  */
 function groups_admin_options_compare_post_types( $o1, $o2 ) {

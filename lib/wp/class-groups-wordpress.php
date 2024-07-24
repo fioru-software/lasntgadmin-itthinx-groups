@@ -40,7 +40,7 @@ class Groups_WordPress {
 	 *
 	 * @var string
 	 */
-	const HAS_CAP     = 'has_cap';
+	const HAS_CAP = 'has_cap';
 
 	/**
 	 * Filter priority: groups_user_can
@@ -69,29 +69,95 @@ class Groups_WordPress {
 	 * is added and checking this in any other way is too costly.
 	 */
 	public static function init() {
-		// args: string $result, Groups_User $groups_user, string $capability
-		add_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY, 3 );
+		// args: boolean $result, Groups_User $groups_user, string $capability
+		add_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY, 5 );
 		add_filter( 'user_has_cap', array( __CLASS__, 'user_has_cap' ), self::USER_HAS_CAP_FILTER_PRIORITY, 4 );
+	}
+
+	/**
+	 * Whether the given user has the capability.
+	 *
+	 * Calls Groups_User::user_can() with user_has_cap and groups_user_can filters temporarily removed.
+	 *
+	 * @since 3.1.0
+	 *
+	 * @param int|WP_User $user user ID or object
+	 * @param string $capability capability name
+	 * @param mixed ...$args optional parameters, typically an object ID
+	 *
+	 * @return boolean
+	 */
+	private static function unfiltered_user_can( $user, $capability, ...$args ) {
+		// We want to check without the capabilities granted to the user via groups.
+		// Groups_User::user_can() relies on user_can() or WP_User->has_cap() in the absense of the former,
+		// which will cause our user_has_cap filter to act so we have to remove it temporarily.
+		// To avoid potential internal conflicts or cicular dependencies, we also remove the groups_user_can filter which
+		// relies on this method.
+		$result = false;
+		$filter_user_has_cap = remove_filter( 'user_has_cap', array( __CLASS__, 'user_has_cap' ), self::USER_HAS_CAP_FILTER_PRIORITY ); // @since 3.1.0
+		$filter_groups_user_can = remove_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY ); // @since 3.1.0
+		$result = Groups_User::user_can( $user, $capability, ...$args );
+		if ( $filter_user_has_cap ) {
+			add_filter( 'user_has_cap', array( __CLASS__, 'user_has_cap' ), self::USER_HAS_CAP_FILTER_PRIORITY, 4 );
+		}
+		if ( $filter_groups_user_can ) {
+			add_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY, 5 );
+		}
+		return $result;
 	}
 
 	/**
 	 * Extends Groups user capability with its WP_User capability.
 	 *
-	 * @param string $result
+	 * @param boolean $result
 	 * @param Groups_User $groups_user
 	 * @param string $capability
+	 * @param mixed $object
+	 * @param mixed $args
+	 *
+	 * @return boolean
 	 */
-	public static function groups_user_can( $result, $groups_user, $capability ) {
+	public static function groups_user_can( $result, $groups_user, $capability, $object, $args ) {
+		// The intention here is to complement capabilities from groups with those from the user.
+		// Our user_has_cap filter extends user capabilities with those from groups, i.e. the reverse complementary.
+		// Thus, our user_has_cap filter should not be involved here. Also, we want to avoid any potential circular
+		// dependency which could arise from having our groups_user_can fired again while we attend to that action here.
+		// To avoid any potential hickups, we also remove the filter while we handle it.
+		$filter_groups_user_can = remove_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY ); // @since 3.1.0
 		if ( !$result ) {
 			// Check if the capability exists, otherwise this will
 			// produce a deprecation warning "Usage of user levels by plugins
 			// and themes is deprecated", not because we actually use a
 			// deprecated user level, but because it doesn't exist.
 			if ( Groups_Capability::read_by_capability( $capability ) ) {
-				if ( isset( $groups_user->user ) && isset( $groups_user->user->ID ) ) {
-					$result = user_can( $groups_user->user->ID, $capability );
+				if ( $groups_user instanceof Groups_User ) {
+					$user_id = $groups_user->get_user_id();
+					if ( $user_id !== null ) {
+						if ( $object === null ) {
+							$result = self::unfiltered_user_can( $user_id, $capability );
+						} else {
+							// @since 3.0.0
+							$object_id = null;
+							if ( is_numeric( $object ) ) {
+								$object_id = Groups_Utility::id( $object_id );
+							} else if ( is_object( $object ) && method_exists( $object, 'get_id' ) ) {
+								$object_id = $object->get_id();
+							}
+							// PHP >= 8.1.0 named arguments can be used after unpacking ...$args
+							// With prior PHP versions, the order in which values appear in an $args array
+							// determines the order of the parameters passed.
+							if ( $object_id !== null ) {
+								$result = self::unfiltered_user_can( $user_id, $capability, $object_id, ...$args );
+							} else {
+								$result = self::unfiltered_user_can( $user_id, $capability, $object, ...$args );
+							}
+						}
+					}
 				}
 			}
+		}
+		if ( $filter_groups_user_can ) {
+			add_filter( 'groups_user_can', array( __CLASS__, 'groups_user_can' ), self::GROUPS_USER_CAN_FILTER_PRIORITY, 5 ); // @since 3.1.0
 		}
 		return $result;
 	}
@@ -103,6 +169,8 @@ class Groups_WordPress {
 	 * @param array $caps the requested capabilities
 	 * @param array $args capability context which can provide the requested capability as $args[0], the user ID as $args[1] and the related object's ID as $args[2]
 	 * @param WP_User $user the user object
+	 *
+	 * @return array
 	 */
 	public static function user_has_cap( $allcaps, $caps, $args, $user ) {
 		if ( is_array( $caps ) ) {
@@ -153,6 +221,7 @@ class Groups_WordPress {
 	/**
 	 * Adds WordPress capabilities to Groups capabilities.
 	 * Must be called explicitly.
+	 *
 	 * @see Groups_Controller::activate()
 	 */
 	public static function activate() {
@@ -161,6 +230,7 @@ class Groups_WordPress {
 
 	/**
 	 * Refreshes Groups capabilities based on WordPress capabilities.
+	 *
 	 * @return int number of capabilities added
 	 */
 	public static function refresh_capabilities() {
